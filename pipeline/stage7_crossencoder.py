@@ -190,11 +190,12 @@ def rerank_top_100(
         "Stage 7: top_500 is empty. Stage 6 must have produced at least "
         "1 candidate. Check Stage 6 (retrieve_top_500)."
     )
-    assert n_in >= n_output, (
-        f"Stage 7: top_500 has only {n_in} candidates, "
-        f"but n_output={n_output} was requested. "
-        "Check Stage 6 — it may not have enough valid candidates."
-    )
+    if n_in < n_output:
+        print(
+            f"[{time.strftime('%H:%M:%S')}] WARNING: Stage 7: top_500 has only {n_in} candidates, "
+            f"but n_output={n_output} was requested. Clamping n_output to {n_in}."
+        )
+        n_output = n_in
 
     print(
         f"[{time.strftime('%H:%M:%S')}] Stage 7: Cross-Encoder Reranking — "

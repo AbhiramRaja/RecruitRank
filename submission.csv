@@ -1,0 +1,17 @@
+candidate_id,rank,score,reasoning
+CAND_0000019,1,0.6056,Project Manager with 6.5 yrs experience; 0 of 26 required skills matched; response rate 34%.
+CAND_0000034,2,0.5752,Business Analyst with 14.5 yrs experience; 0 of 26 required skills matched; response rate 15%.
+CAND_0000015,3,0.5057,Software Engineer with 5.4 yrs experience; 2 of 26 required skills matched; response rate 32%.
+CAND_0000031,4,0.489,Recommendation Systems Engineer with 6.0 yrs experience; 6 of 26 required skills matched; response rate 91%.
+CAND_0000014,5,0.4477,Frontend Engineer with 8.4 yrs experience; 2 of 26 required skills matched; response rate 80%.
+CAND_0000050,6,0.4139,Business Analyst with 13.5 yrs experience; 0 of 26 required skills matched; response rate 42%.
+CAND_0000043,7,0.392,Cloud Engineer with 8.3 yrs experience; 4 of 26 required skills matched; response rate 4%.
+CAND_0000045,8,0.3605,Project Manager with 12.2 yrs experience; 0 of 26 required skills matched; response rate 62%.
+CAND_0000048,9,0.3247,Mobile Developer with 9.7 yrs experience; 0 of 26 required skills matched; response rate 65%.
+CAND_0000021,10,0.2906,Project Manager with 14.5 yrs experience; 4 of 26 required skills matched; response rate 49%.
+CAND_0000011,11,0.2723,QA Engineer with 2.0 yrs experience; 1 of 26 required skills matched; response rate 56%.
+CAND_0000025,12,0.1989,Frontend Engineer with 7.3 yrs experience; 0 of 26 required skills matched; response rate 74%.
+CAND_0000038,13,0.1968,Java Developer with 6.7 yrs experience; 1 of 26 required skills matched; response rate 20%.
+CAND_0000032,14,0.1868,.NET Developer with 8.1 yrs experience; 2 of 26 required skills matched; response rate 69%.
+CAND_0000035,15,0.1209,Full Stack Developer with 4.3 yrs experience; 1 of 26 required skills matched; response rate 34%.
+CAND_0000044,16,0.0898,Frontend Engineer with 5.7 yrs experience; 1 of 26 required skills matched; response rate 66%.
