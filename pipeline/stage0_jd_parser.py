@@ -3,15 +3,24 @@ Stage 0 — JD Parsing
 
 Runs: Offline, once, before any candidate processing.
 Input: Job Description text (from job_description.docx)
-Output: jd_parsed dict saved to artifacts/jd_parsed.json
+Output:
+  artifacts/jd_parsed.json   — structured JD signals (required skills, etc.)
+  artifacts/jd_vector.npy    — L2-normalised SBERT embedding of jd_embedding_text
 
-Parses the JD into three buckets (required_skills, nice_to_have_skills,
-hard_disqualifiers) plus a jd_embedding_text string for SBERT embedding.
+Per architecture.md Stage 0:
+  "Embed jd_embedding_text using all-MiniLM-L6-v2 and save the JD vector
+   to artifacts/jd_vector.npy."
 """
 
 import json
 import os
 
+from pipeline.constants import SBERT_MODEL_NAME, EMBEDDING_DIM
+
+
+# ---------------------------------------------------------------------------
+# JD parsing
+# ---------------------------------------------------------------------------
 
 def parse_jd() -> dict:
     """
@@ -188,8 +197,9 @@ def parse_jd() -> dict:
         #   - What the person will actually do
         #   - The "ideal candidate" profile
         #
-        # This is embedded once in Stage 0 and compared against each
-        # candidate's career_text and skills_text embeddings in Stage 3.
+        # This is embedded once in Stage 0 and the resulting jd_vector.npy
+        # is compared against each candidate's career and skills embeddings
+        # in Stage 3.
         # ----------------------------------------------------------------
         "jd_embedding_text": (
             "Senior AI Engineer at an AI-native talent intelligence platform. "
@@ -225,6 +235,10 @@ def parse_jd() -> dict:
     return jd_parsed
 
 
+# ---------------------------------------------------------------------------
+# Artifact savers
+# ---------------------------------------------------------------------------
+
 def save_jd_parsed(jd_parsed: dict, artifacts_dir: str = "artifacts") -> str:
     """
     Save the parsed JD to artifacts/jd_parsed.json.
@@ -246,8 +260,66 @@ def save_jd_parsed(jd_parsed: dict, artifacts_dir: str = "artifacts") -> str:
     return output_path
 
 
+def compute_and_save_jd_vector(
+    jd_parsed: dict, artifacts_dir: str = "artifacts"
+) -> str:
+    """
+    Embed jd_parsed["jd_embedding_text"] with all-MiniLM-L6-v2 and save
+    the resulting L2-normalised vector to artifacts/jd_vector.npy.
+
+    Per architecture.md Stage 0:
+        "Embed jd_embedding_text using all-MiniLM-L6-v2 and save the JD
+         vector to artifacts/jd_vector.npy."
+
+    Note: Stage 3 also computes this vector as part of bulk candidate
+    embedding.  Running Stage 0 first means Stage 3 will find a consistent
+    file already on disk (Stage 3 overwrites with the identical value).
+
+    Args:
+        jd_parsed: The parsed JD dict (must contain "jd_embedding_text").
+        artifacts_dir: Directory to save the .npy file into.
+
+    Returns:
+        Path to the saved jd_vector.npy file.
+
+    Raises:
+        ValueError: If jd_embedding_text is empty.
+    """
+    # Deferred import — keeps module lightweight when SBERT is not needed.
+    import numpy as np
+    from sentence_transformers import SentenceTransformer
+
+    jd_text = jd_parsed.get("jd_embedding_text", "")
+    if not jd_text:
+        raise ValueError(
+            "jd_parsed['jd_embedding_text'] is empty. "
+            "Cannot embed. Check parse_jd() output."
+        )
+
+    print(f"[Stage 0] Loading SBERT model '{SBERT_MODEL_NAME}' for JD vector...")
+    model = SentenceTransformer(SBERT_MODEL_NAME)
+
+    # Per instructions.md Section 6.5: normalize all embeddings.
+    jd_vector = model.encode(jd_text, normalize_embeddings=True)
+    jd_vector = np.asarray(jd_vector, dtype=np.float32)
+
+    assert jd_vector.shape == (EMBEDDING_DIM,), (
+        f"jd_vector shape mismatch: expected ({EMBEDDING_DIM},), "
+        f"got {jd_vector.shape}"
+    )
+
+    os.makedirs(artifacts_dir, exist_ok=True)
+    output_path = os.path.join(artifacts_dir, "jd_vector.npy")
+    np.save(output_path, jd_vector)
+    print(
+        f"[Stage 0] Saved jd_vector.npy -> {output_path} "
+        f"(shape: {jd_vector.shape})"
+    )
+    return output_path
+
+
 # ---------------------------------------------------------------------------
-# Standalone execution: parse JD and save to artifacts/
+# Standalone execution: parse JD, save JSON + JD vector
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     import time
@@ -258,7 +330,13 @@ if __name__ == "__main__":
 
     # Resolve artifacts dir relative to project root (RecruitRank/)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    save_jd_parsed(parsed, artifacts_dir=os.path.join(project_root, "artifacts"))
+    artifacts_dir = os.path.join(project_root, "artifacts")
+
+    # 1. Save parsed JD JSON
+    save_jd_parsed(parsed, artifacts_dir=artifacts_dir)
+
+    # 2. Embed jd_embedding_text and save jd_vector.npy
+    compute_and_save_jd_vector(parsed, artifacts_dir=artifacts_dir)
 
     # Summary
     print(f"  Required skills   : {len(parsed['required_skills'])} items")

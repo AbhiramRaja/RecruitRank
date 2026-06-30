@@ -21,6 +21,8 @@ Output files:
   artifacts/jd_vector.npy           shape: (384,)    float32
   artifacts/candidate_ids.json      ordered list of candidate_ids matching
                                     rows in the embedding arrays
+  artifacts/career_texts.json       {candidate_id: career_text} — required
+                                    by Stage 7 cross-encoder at ranking time
 """
 
 import json
@@ -30,65 +32,8 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
-# Model name — per instructions.md Section 6.1: use all-MiniLM-L6-v2 only.
-SBERT_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-EMBEDDING_DIM = 384
-BATCH_SIZE = 256  # per instructions.md Section 11.3
-
-
-# ---------------------------------------------------------------------------
-# Text builders
-# ---------------------------------------------------------------------------
-
-def build_career_text(candidate: Dict) -> str:
-    """
-    Build the career embedding input text for one candidate.
-
-    Per architecture.md Stage 3, Track A:
-        career_text = " ".join(
-            f"{entry['title']} at {entry['company']}: {entry['description']}"
-            for entry in career_history
-        )
-
-    Per instructions.md Section 6.4: embed career descriptions, not just
-    skill tags. The primary embedding target is career_history[*].description
-    concatenated with title and company context.
-    """
-    career_history = candidate.get("career_history", [])
-    parts = []
-    for entry in career_history:
-        title = entry.get("title", "")
-        company = entry.get("company", "")
-        description = entry.get("description", "")
-        parts.append(f"{title} at {company}: {description}")
-    return " ".join(parts) if parts else ""
-
-
-def build_skills_text(candidate: Dict, required_skills_lower: set) -> str:
-    """
-    Build the skills embedding input text for one candidate.
-
-    Per architecture.md Stage 3, Track B:
-        skill_text = " ".join(
-            ([skill.name] * 3 if skill.name.lower() in required_skills_lower
-             else [skill.name])
-            for skill in skills
-        )
-
-    Required skills are repeated 3× to boost their semantic weight
-    in the embedding space.
-    """
-    skills = candidate.get("skills", [])
-    tokens = []
-    for skill in skills:
-        name = skill.get("name", "")
-        if not name:
-            continue
-        if name.lower() in required_skills_lower:
-            tokens.extend([name] * 3)
-        else:
-            tokens.append(name)
-    return " ".join(tokens) if tokens else ""
+from pipeline.constants import EMBEDDING_BATCH_SIZE, EMBEDDING_DIM, SBERT_MODEL_NAME
+from pipeline.utils import build_career_text, build_skills_text
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +45,7 @@ def compute_embeddings(
     jd_parsed: Dict,
     artifacts_dir: str = "artifacts",
     model_cache_dir: str = None,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, List[str]]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, List[str], Dict[str, str]]:
     """
     Compute dual-track SBERT embeddings for all candidates + JD vector.
 
@@ -112,56 +57,67 @@ def compute_embeddings(
         model_cache_dir: Optional directory for caching the SBERT model.
 
     Returns:
-        Tuple of (career_embeddings, skills_embeddings, jd_vector, candidate_ids)
-        where:
-          career_embeddings: np.ndarray shape (N, 384)
-          skills_embeddings: np.ndarray shape (N, 384)
-          jd_vector:         np.ndarray shape (384,)
-          candidate_ids:     list of N candidate_id strings
+        Tuple of (career_embeddings, skills_embeddings, jd_vector,
+                  candidate_ids, career_texts_dict) where:
+          career_embeddings:  np.ndarray shape (N, 384)
+          skills_embeddings:  np.ndarray shape (N, 384)
+          jd_vector:          np.ndarray shape (384,)
+          candidate_ids:      list of N candidate_id strings (row order)
+          career_texts_dict:  {candidate_id: career_text} for Stage 7
     """
-    # Import here to avoid import-time cost when this module is just
-    # being inspected or when the model isn't needed.
+    # Deferred import — avoids import-time overhead when module is inspected.
     from sentence_transformers import SentenceTransformer
 
     n = len(candidates)
-    print(f"[{time.strftime('%H:%M:%S')}] Stage 3: Loading SBERT model "
-          f"'{SBERT_MODEL_NAME}'...")
+    print(
+        f"[{time.strftime('%H:%M:%S')}] Stage 3: Loading SBERT model "
+        f"'{SBERT_MODEL_NAME}'..."
+    )
 
-    load_kwargs = {}
+    load_kwargs: Dict = {}
     if model_cache_dir:
         load_kwargs["cache_folder"] = model_cache_dir
 
     model = SentenceTransformer(SBERT_MODEL_NAME, **load_kwargs)
-    print(f"[{time.strftime('%H:%M:%S')}] Stage 3: Model loaded. "
-          f"Embedding {n} candidates (batch_size={BATCH_SIZE})...")
+    print(
+        f"[{time.strftime('%H:%M:%S')}] Stage 3: Model loaded. "
+        f"Embedding {n} candidates (batch_size={EMBEDDING_BATCH_SIZE})..."
+    )
 
-    # --- Build required skills set for skill weighting ---
+    # Build required skills set for Track B weighting
     required_skills_lower = {
         s.lower() for s in jd_parsed.get("required_skills", [])
     }
 
-    # --- Build text inputs ---
+    # Build text inputs and store career texts for Stage 7
     candidate_ids: List[str] = []
     career_texts: List[str] = []
     skills_texts: List[str] = []
+    career_texts_dict: Dict[str, str] = {}
 
     for candidate in candidates:
-        candidate_ids.append(candidate["candidate_id"])
-        career_texts.append(build_career_text(candidate))
-        skills_texts.append(build_skills_text(candidate, required_skills_lower))
+        cid = candidate["candidate_id"]
+        c_text = build_career_text(candidate)
+        s_text = build_skills_text(candidate, required_skills_lower)
+
+        candidate_ids.append(cid)
+        career_texts.append(c_text)
+        skills_texts.append(s_text)
+        career_texts_dict[cid] = c_text   # keyed dict for Stage 7 lookup
 
     # --- Track A: Career Description Embeddings (batched) ---
     # Per instructions.md Section 6.5: normalize all embeddings.
     # Per instructions.md Section 11.3: use batch processing.
-    print(f"[{time.strftime('%H:%M:%S')}] Stage 3: Track A — "
-          f"Career description embeddings ({n} texts)...")
+    print(
+        f"[{time.strftime('%H:%M:%S')}] Stage 3: Track A — "
+        f"Career description embeddings ({n} texts)..."
+    )
     career_embeddings = model.encode(
         career_texts,
-        batch_size=BATCH_SIZE,
+        batch_size=EMBEDDING_BATCH_SIZE,
         normalize_embeddings=True,
         show_progress_bar=True,
     )
-    # Ensure float32 ndarray
     career_embeddings = np.asarray(career_embeddings, dtype=np.float32)
     assert career_embeddings.shape == (n, EMBEDDING_DIM), (
         f"career_embeddings shape mismatch: expected ({n}, {EMBEDDING_DIM}), "
@@ -169,11 +125,13 @@ def compute_embeddings(
     )
 
     # --- Track B: Skills Embeddings (batched) ---
-    print(f"[{time.strftime('%H:%M:%S')}] Stage 3: Track B — "
-          f"Skills embeddings ({n} texts)...")
+    print(
+        f"[{time.strftime('%H:%M:%S')}] Stage 3: Track B — "
+        f"Skills embeddings ({n} texts)..."
+    )
     skills_embeddings = model.encode(
         skills_texts,
-        batch_size=BATCH_SIZE,
+        batch_size=EMBEDDING_BATCH_SIZE,
         normalize_embeddings=True,
         show_progress_bar=True,
     )
@@ -183,7 +141,10 @@ def compute_embeddings(
         f"got {skills_embeddings.shape}"
     )
 
-    # --- JD Vector (single text) ---
+    # --- JD Vector ---
+    # Per architecture.md Stage 0: also computed here so Stage 3 is
+    # self-contained. jd_vector.npy may already exist from Stage 0;
+    # this overwrites it with the identical value (idempotent).
     print(f"[{time.strftime('%H:%M:%S')}] Stage 3: Computing JD vector...")
     jd_embedding_text = jd_parsed.get("jd_embedding_text", "")
     if not jd_embedding_text:
@@ -191,10 +152,7 @@ def compute_embeddings(
             "jd_parsed['jd_embedding_text'] is empty. "
             "Run Stage 0 (JD Parsing) first."
         )
-    jd_vector = model.encode(
-        jd_embedding_text,
-        normalize_embeddings=True,
-    )
+    jd_vector = model.encode(jd_embedding_text, normalize_embeddings=True)
     jd_vector = np.asarray(jd_vector, dtype=np.float32)
     assert jd_vector.shape == (EMBEDDING_DIM,), (
         f"jd_vector shape mismatch: expected ({EMBEDDING_DIM},), "
@@ -202,7 +160,7 @@ def compute_embeddings(
     )
 
     print(f"[{time.strftime('%H:%M:%S')}] Stage 3: All embeddings computed.")
-    return career_embeddings, skills_embeddings, jd_vector, candidate_ids
+    return career_embeddings, skills_embeddings, jd_vector, candidate_ids, career_texts_dict
 
 
 # ---------------------------------------------------------------------------
@@ -214,6 +172,7 @@ def save_embeddings(
     skills_embeddings: np.ndarray,
     jd_vector: np.ndarray,
     candidate_ids: List[str],
+    career_texts_dict: Dict[str, str],
     artifacts_dir: str = "artifacts",
 ) -> None:
     """
@@ -224,6 +183,7 @@ def save_embeddings(
       artifacts/skills_embeddings.npy   (N, 384)
       artifacts/jd_vector.npy           (384,)
       artifacts/candidate_ids.json      ordered list of candidate_id strings
+      artifacts/career_texts.json       {candidate_id: career_text} for Stage 7
     """
     os.makedirs(artifacts_dir, exist_ok=True)
 
@@ -231,30 +191,47 @@ def save_embeddings(
     skills_path = os.path.join(artifacts_dir, "skills_embeddings.npy")
     jd_path = os.path.join(artifacts_dir, "jd_vector.npy")
     ids_path = os.path.join(artifacts_dir, "candidate_ids.json")
+    texts_path = os.path.join(artifacts_dir, "career_texts.json")
 
     np.save(career_path, career_embeddings)
-    print(f"[Stage 3] Saved career_embeddings.npy -> {career_path} "
-          f"(shape: {career_embeddings.shape})")
+    print(
+        f"[Stage 3] Saved career_embeddings.npy -> {career_path} "
+        f"(shape: {career_embeddings.shape})"
+    )
 
     np.save(skills_path, skills_embeddings)
-    print(f"[Stage 3] Saved skills_embeddings.npy -> {skills_path} "
-          f"(shape: {skills_embeddings.shape})")
+    print(
+        f"[Stage 3] Saved skills_embeddings.npy -> {skills_path} "
+        f"(shape: {skills_embeddings.shape})"
+    )
 
     np.save(jd_path, jd_vector)
-    print(f"[Stage 3] Saved jd_vector.npy -> {jd_path} "
-          f"(shape: {jd_vector.shape})")
+    print(
+        f"[Stage 3] Saved jd_vector.npy -> {jd_path} "
+        f"(shape: {jd_vector.shape})"
+    )
 
     with open(ids_path, "w", encoding="utf-8") as f:
         json.dump(candidate_ids, f)
-    print(f"[Stage 3] Saved candidate_ids.json -> {ids_path} "
-          f"({len(candidate_ids)} entries)")
+    print(
+        f"[Stage 3] Saved candidate_ids.json -> {ids_path} "
+        f"({len(candidate_ids)} entries)"
+    )
+
+    # career_texts.json — keyed by candidate_id for O(1) lookup in Stage 7
+    with open(texts_path, "w", encoding="utf-8") as f:
+        json.dump(career_texts_dict, f, ensure_ascii=False)
+    print(
+        f"[Stage 3] Saved career_texts.json -> {texts_path} "
+        f"({len(career_texts_dict)} entries)"
+    )
 
 
 def load_embeddings(
     artifacts_dir: str = "artifacts",
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, List[str]]:
     """
-    Load pre-computed embedding artifacts from disk.
+    Load the core pre-computed embedding artifacts from disk.
 
     Returns:
         Tuple of (career_embeddings, skills_embeddings, jd_vector, candidate_ids)
@@ -281,12 +258,44 @@ def load_embeddings(
     with open(ids_path, "r", encoding="utf-8") as f:
         candidate_ids = json.load(f)
 
-    assert career_embeddings.shape[1] == EMBEDDING_DIM
-    assert skills_embeddings.shape[1] == EMBEDDING_DIM
-    assert jd_vector.shape == (EMBEDDING_DIM,)
-    assert len(candidate_ids) == career_embeddings.shape[0]
+    assert career_embeddings.shape[1] == EMBEDDING_DIM, (
+        f"career_embeddings dim mismatch: expected {EMBEDDING_DIM}, "
+        f"got {career_embeddings.shape[1]}"
+    )
+    assert skills_embeddings.shape[1] == EMBEDDING_DIM, (
+        f"skills_embeddings dim mismatch: expected {EMBEDDING_DIM}, "
+        f"got {skills_embeddings.shape[1]}"
+    )
+    assert jd_vector.shape == (EMBEDDING_DIM,), (
+        f"jd_vector shape mismatch: expected ({EMBEDDING_DIM},), "
+        f"got {jd_vector.shape}"
+    )
+    assert len(candidate_ids) == career_embeddings.shape[0], (
+        f"candidate_ids length {len(candidate_ids)} != "
+        f"career_embeddings rows {career_embeddings.shape[0]}"
+    )
 
     return career_embeddings, skills_embeddings, jd_vector, candidate_ids
+
+
+def load_career_texts(artifacts_dir: str = "artifacts") -> Dict[str, str]:
+    """
+    Load the pre-computed career_texts.json artifact.
+
+    Returns:
+        Dict mapping candidate_id -> career_text string.
+
+    Raises:
+        FileNotFoundError: If career_texts.json is missing (run precompute.py).
+    """
+    texts_path = os.path.join(artifacts_dir, "career_texts.json")
+    if not os.path.exists(texts_path):
+        raise FileNotFoundError(
+            f"Missing artifact: {texts_path}. "
+            "Run precompute.py (Stage 3) first."
+        )
+    with open(texts_path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 def compute_embedding_scores(
@@ -303,6 +312,7 @@ def compute_embedding_scores(
         embedding_score = 0.65 * career_sim + 0.35 * skills_sim
 
     Since all vectors are L2-normalized, cosine similarity = dot product.
+    Per instructions.md Section 6.3: this formula is fixed.
 
     Args:
         career_embeddings: (N, 384) normalized career vectors
@@ -312,59 +322,57 @@ def compute_embedding_scores(
     Returns:
         np.ndarray of shape (N,) with combined embedding scores.
     """
-    # Dot product with normalized vectors = cosine similarity
     career_sim = career_embeddings @ jd_vector   # (N,)
     skills_sim = skills_embeddings @ jd_vector   # (N,)
-
-    # Per architecture.md: embedding_score = 0.65 * career_sim + 0.35 * skills_sim
-    # Per instructions.md Section 6.3: this formula is fixed.
-    embedding_scores = 0.65 * career_sim + 0.35 * skills_sim
-
-    return embedding_scores
+    return 0.65 * career_sim + 0.35 * skills_sim
 
 
 # ---------------------------------------------------------------------------
-# Standalone execution: run Stage 3 on sample_candidates.json
+# Standalone execution
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     from pipeline.stage0_jd_parser import parse_jd
     from pipeline.stage1_filters import apply_hard_filters, apply_honeypot_gate
 
-    print(f"[{time.strftime('%H:%M:%S')}] Stage 3: Dual-Track SBERT Embedding — start")
+    print(
+        f"[{time.strftime('%H:%M:%S')}] "
+        "Stage 3: Dual-Track SBERT Embedding — start"
+    )
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     sample_path = os.path.join(project_root, "sample_candidates.json")
     artifacts_dir = os.path.join(project_root, "artifacts")
 
-    # --- Stage 0: parse JD ---
     jd_parsed = parse_jd()
 
-    # --- Load candidates ---
     if not os.path.exists(sample_path):
-        print(f"ERROR: {sample_path} not found. Cannot run standalone test.")
+        print(f"ERROR: {sample_path} not found.")
         exit(1)
 
     with open(sample_path, "r", encoding="utf-8") as f:
         candidates = json.load(f)
     print(f"  Loaded {len(candidates)} candidates from sample_candidates.json")
 
-    # --- Stage 1: filter ---
+    # Stage 1: filter + honeypot gate
     filtered = apply_hard_filters(candidates, jd_parsed)
     filtered = apply_honeypot_gate(filtered)
-    # Only embed non-honeypot candidates (per architecture: honeypot gate
-    # before embedding — no wasted SBERT compute on zero-score candidates)
+    # Per architecture.md Key Design Decisions: no SBERT compute on honeypots
     valid = [c for c in filtered if not c.get("honeypot_flag", False)]
-    print(f"  After Stage 1: {len(valid)} valid candidates "
-          f"(filtered from {len(candidates)})")
-
-    # --- Stage 3: embeddings ---
-    career_emb, skills_emb, jd_vec, cids = compute_embeddings(
-        valid, jd_parsed, artifacts_dir=artifacts_dir
+    print(
+        f"  After Stage 1: {len(valid)} valid candidates "
+        f"(filtered from {len(candidates)})"
     )
 
-    save_embeddings(career_emb, skills_emb, jd_vec, cids, artifacts_dir=artifacts_dir)
+    # Stage 3: embeddings
+    career_emb, skills_emb, jd_vec, cids, texts_dict = compute_embeddings(
+        valid, jd_parsed, artifacts_dir=artifacts_dir
+    )
+    save_embeddings(
+        career_emb, skills_emb, jd_vec, cids, texts_dict,
+        artifacts_dir=artifacts_dir,
+    )
 
-    # --- Quick sanity check ---
+    # Sanity check
     scores = compute_embedding_scores(career_emb, skills_emb, jd_vec)
     print(f"\n  Embedding score stats:")
     print(f"    min:  {scores.min():.4f}")
@@ -372,10 +380,12 @@ if __name__ == "__main__":
     print(f"    mean: {scores.mean():.4f}")
     print(f"    std:  {scores.std():.4f}")
 
-    # Top-5 by embedding score
     top5_idx = np.argsort(scores)[::-1][:5]
     print(f"\n  Top 5 candidates by embedding score:")
     for i, idx in enumerate(top5_idx):
         print(f"    {i+1}. {cids[idx]}  score={scores[idx]:.4f}")
 
-    print(f"\n[{time.strftime('%H:%M:%S')}] Stage 3: Dual-Track SBERT Embedding — complete")
+    print(
+        f"\n[{time.strftime('%H:%M:%S')}] "
+        "Stage 3: Dual-Track SBERT Embedding — complete"
+    )
