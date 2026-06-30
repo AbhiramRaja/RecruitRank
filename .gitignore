@@ -1,0 +1,16 @@
+# Datasets
+candidates.jsonl
+candidates.jsonl.gz
+
+# Generated artifacts
+artifacts/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE / Editor
+.vscode/
+.idea/
+.gemini/
