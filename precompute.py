@@ -178,9 +178,22 @@ def run_stage3(valid_candidates, jd_parsed, artifacts_dir: str, force: bool):
     return career_emb, skills_emb, jd_vec, cids, career_texts
 
 
-def run_stages_456(features_df, career_emb, skills_emb, jd_vec, cids, candidates_dict):
+def run_stages_456(features_df, career_emb, skills_emb, jd_vec, cids, candidates_dict, gated=None):
     from pipeline.stage4_scorer import compute_weighted_scores
     from pipeline.stage5_behavioral import apply_behavioral_modifier
+
+    # Reconstruct honeypot_flag if missing from a stale cached parquet
+    if "honeypot_flag" not in features_df.columns:
+        if gated is not None:
+            print(f"[{_ts()}] WARNING: 'honeypot_flag' missing from features.parquet (stale cache). "
+                  "Reconstructing from Stage 1 gated candidates...")
+            flag_map = {c["candidate_id"]: c.get("honeypot_flag", False) for c in gated}
+            features_df = features_df.copy()
+            features_df["honeypot_flag"] = features_df["candidate_id"].map(flag_map).fillna(False)
+        else:
+            print(f"[{_ts()}] WARNING: 'honeypot_flag' missing — treating all as non-honeypot.")
+            features_df = features_df.copy()
+            features_df["honeypot_flag"] = False
 
     # Stage 4: base scores (only valid/non-honeypot features)
     print(f"[{_ts()}] Stage 4: Weighted Score Combiner — start")
@@ -289,7 +302,7 @@ def main():
 
     # --- Stages 4+5: Scoring + Behavioral Modifier ---
     final_df = run_stages_456(features_df, career_emb, skills_emb, jd_vec,
-                              cids, candidates_dict)
+                              cids, candidates_dict, gated=gated)
 
     # --- Stage 6: Top 500 Retrieval ---
     top_500 = run_stage6(final_df)

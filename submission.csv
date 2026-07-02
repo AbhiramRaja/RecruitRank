@@ -1,17 +1,101 @@
 candidate_id,rank,score,reasoning
-CAND_0000019,1,0.6056,Project Manager with 6.5 yrs experience; 0 of 26 required skills matched; response rate 34%.
-CAND_0000034,2,0.5752,Business Analyst with 14.5 yrs experience; 0 of 26 required skills matched; response rate 15%.
-CAND_0000015,3,0.5057,Software Engineer with 5.4 yrs experience; 2 of 26 required skills matched; response rate 32%.
-CAND_0000031,4,0.489,Recommendation Systems Engineer with 6.0 yrs experience; 6 of 26 required skills matched; response rate 91%.
-CAND_0000014,5,0.4477,Frontend Engineer with 8.4 yrs experience; 2 of 26 required skills matched; response rate 80%.
-CAND_0000050,6,0.4139,Business Analyst with 13.5 yrs experience; 0 of 26 required skills matched; response rate 42%.
-CAND_0000043,7,0.392,Cloud Engineer with 8.3 yrs experience; 4 of 26 required skills matched; response rate 4%.
-CAND_0000045,8,0.3605,"The candidate ranks 8th due to a lack of matched required skills, a low interview completion rate, and a willingness to work with a 60-day notice period."
-CAND_0000048,9,0.3247,"The candidate ranks 9th due to a high experience level in mobile development, but lacks the required skills and has a low interview completion rate."
-CAND_0000021,10,0.2906,Project Manager with 14.5 yrs experience; 4 of 26 required skills matched; response rate 49%.
-CAND_0000011,11,0.2723,QA Engineer with 2.0 yrs experience; 1 of 26 required skills matched; response rate 56%.
-CAND_0000025,12,0.1989,Frontend Engineer with 7.3 yrs experience; 0 of 26 required skills matched; response rate 74%.
-CAND_0000038,13,0.1968,Java Developer with 6.7 yrs experience; 1 of 26 required skills matched; response rate 20%.
-CAND_0000032,14,0.1868,.NET Developer with 8.1 yrs experience; 2 of 26 required skills matched; response rate 69%.
-CAND_0000035,15,0.1209,Full Stack Developer with 4.3 yrs experience; 1 of 26 required skills matched; response rate 34%.
-CAND_0000044,16,0.0898,Frontend Engineer with 5.7 yrs experience; 1 of 26 required skills matched; response rate 66%.
+CAND_0046525,1,0.8978,Senior Machine Learning Engineer with 6.1 yrs experience; 8 of 26 required skills matched; response rate 88%.
+CAND_0081846,2,0.8959,Lead AI Engineer with 6.7 yrs experience; 9 of 26 required skills matched; response rate 73%.
+CAND_0077337,3,0.8614,Staff Machine Learning Engineer with 7.0 yrs experience; 9 of 26 required skills matched; response rate 95%.
+CAND_0015967,4,0.8601,Senior Software Engineer (ML) with 5.4 yrs experience; 5 of 26 required skills matched; response rate 45%.
+CAND_0094759,5,0.8534,Lead AI Engineer with 8.6 yrs experience; 4 of 26 required skills matched; response rate 11%.
+CAND_0008425,6,0.849,Senior NLP Engineer with 7.8 yrs experience; 7 of 26 required skills matched; response rate 66%.
+CAND_0082913,7,0.8156,Senior Software Engineer (ML) with 5.5 yrs experience; 5 of 26 required skills matched; response rate 73%.
+CAND_0005260,8,0.8138,Senior NLP Engineer with 5.2 yrs experience; 6 of 26 required skills matched; response rate 86%.
+CAND_0046064,9,0.8136,Senior NLP Engineer with 8.9 yrs experience; 5 of 26 required skills matched; response rate 78%.
+CAND_0057563,10,0.813,NLP Engineer with 6.8 yrs experience; 5 of 26 required skills matched; response rate 83%.
+CAND_0005649,11,0.8125,Senior Data Scientist with 7.4 yrs experience; 6 of 26 required skills matched; response rate 57%.
+CAND_0035764,12,0.8101,Senior Software Engineer (ML) with 6.8 yrs experience; 4 of 26 required skills matched; response rate 38%.
+CAND_0002025,13,0.8093,Senior AI Engineer with 5.9 yrs experience; 10 of 26 required skills matched; response rate 80%.
+CAND_0068811,14,0.8082,Applied ML Engineer with 8.0 yrs experience; 6 of 26 required skills matched; response rate 42%.
+CAND_0086022,15,0.8062,Senior Applied Scientist with 5.3 yrs experience; 9 of 26 required skills matched; response rate 55%.
+CAND_0013665,16,0.8053,Senior Software Engineer (ML) with 5.2 yrs experience; 3 of 26 required skills matched; response rate 73%.
+CAND_0033861,17,0.7985,Senior NLP Engineer with 8.0 yrs experience; 9 of 26 required skills matched; response rate 16%.
+CAND_0066791,18,0.7959,Senior Software Engineer (ML) with 5.6 yrs experience; 4 of 26 required skills matched; response rate 42%.
+CAND_0058412,19,0.7891,Senior Software Engineer (ML) with 6.6 yrs experience; 5 of 26 required skills matched; response rate 43%.
+CAND_0093193,20,0.7888,Senior Machine Learning Engineer with 7.9 yrs experience; 5 of 26 required skills matched; response rate 61%.
+CAND_0068351,21,0.7834,Lead AI Engineer with 6.4 yrs experience; 7 of 26 required skills matched; response rate 86%.
+CAND_0087006,22,0.7817,Senior Software Engineer (ML) with 5.7 yrs experience; 3 of 26 required skills matched; response rate 32%.
+CAND_0018499,23,0.7774,Senior Machine Learning Engineer with 7.2 yrs experience; 8 of 26 required skills matched; response rate 61%.
+CAND_0007411,24,0.7717,Senior Machine Learning Engineer with 8.0 yrs experience; 6 of 26 required skills matched; response rate 12%.
+CAND_0093912,25,0.7713,Senior Data Scientist with 5.3 yrs experience; 4 of 26 required skills matched; response rate 66%.
+CAND_0060835,26,0.7707,Senior Software Engineer (ML) with 6.6 yrs experience; 5 of 26 required skills matched; response rate 32%.
+CAND_0017090,27,0.7682,Senior Software Engineer (ML) with 5.5 yrs experience; 3 of 26 required skills matched; response rate 71%.
+CAND_0011327,28,0.7635,AI Research Engineer with 6.3 yrs experience; 2 of 26 required skills matched; response rate 79%.
+CAND_0036863,29,0.7633,Senior Data Scientist with 4.3 yrs experience; 3 of 26 required skills matched; response rate 46%.
+CAND_0064331,30,0.7613,Senior Software Engineer (ML) with 4.2 yrs experience; 6 of 26 required skills matched; response rate 74%.
+CAND_0044855,31,0.7585,Senior Data Scientist with 6.6 yrs experience; 7 of 26 required skills matched; response rate 57%.
+CAND_0020991,32,0.7583,Junior ML Engineer with 4.9 yrs experience; 3 of 26 required skills matched; response rate 88%.
+CAND_0071974,33,0.7551,Senior AI Engineer with 7.8 yrs experience; 9 of 26 required skills matched; response rate 76%.
+CAND_0027691,34,0.7519,NLP Engineer with 6.5 yrs experience; 5 of 26 required skills matched; response rate 68%.
+CAND_0080766,35,0.7499,Staff Machine Learning Engineer with 8.8 yrs experience; 6 of 26 required skills matched; response rate 66%.
+CAND_0046278,36,0.7468,Senior Software Engineer (ML) with 4.6 yrs experience; 4 of 26 required skills matched; response rate 50%.
+CAND_0042029,37,0.7458,Senior Data Scientist with 6.5 yrs experience; 8 of 26 required skills matched; response rate 67%.
+CAND_0091254,38,0.7376,AI Research Engineer with 5.2 yrs experience; 5 of 26 required skills matched; response rate 53%.
+CAND_0037980,39,0.7371,Senior Applied Scientist with 9.0 yrs experience; 3 of 26 required skills matched; response rate 63%.
+CAND_0043829,40,0.7361,AI Research Engineer with 4.8 yrs experience; 3 of 26 required skills matched; response rate 78%.
+CAND_0061257,41,0.7327,Staff Machine Learning Engineer with 8.0 yrs experience; 2 of 26 required skills matched; response rate 87%.
+CAND_0081852,42,0.7324,Senior Data Scientist with 5.9 yrs experience; 2 of 26 required skills matched; response rate 44%.
+CAND_0010257,43,0.7312,Senior Data Scientist with 6.5 yrs experience; 7 of 26 required skills matched; response rate 72%.
+CAND_0050454,44,0.7297,AI Engineer with 6.8 yrs experience; 5 of 26 required skills matched; response rate 77%.
+CAND_0074317,45,0.7291,AI Research Engineer with 4.2 yrs experience; 4 of 26 required skills matched; response rate 86%.
+CAND_0075574,46,0.7262,Machine Learning Engineer with 5.7 yrs experience; 6 of 26 required skills matched; response rate 58%.
+CAND_0069905,47,0.7248,Applied ML Engineer with 6.6 yrs experience; 5 of 26 required skills matched; response rate 78%.
+CAND_0005538,48,0.7178,Senior AI Engineer with 5.9 yrs experience; 3 of 26 required skills matched; response rate 81%.
+CAND_0050876,49,0.7154,Applied ML Engineer with 6.0 yrs experience; 7 of 26 required skills matched; response rate 67%.
+CAND_0099751,50,0.7153,Junior ML Engineer with 5.5 yrs experience; 2 of 26 required skills matched; response rate 64%.
+CAND_0015065,51,0.7141,AI Research Engineer with 3.9 yrs experience; 4 of 26 required skills matched; response rate 84%.
+CAND_0070206,52,0.7128,Senior Software Engineer (ML) with 4.9 yrs experience; 3 of 26 required skills matched; response rate 49%.
+CAND_0063097,53,0.7112,Senior Software Engineer (ML) with 6.5 yrs experience; 3 of 26 required skills matched; response rate 64%.
+CAND_0074339,54,0.7103,ML Engineer with 5.3 yrs experience; 5 of 26 required skills matched; response rate 58%.
+CAND_0015528,55,0.7079,Applied ML Engineer with 7.4 yrs experience; 6 of 26 required skills matched; response rate 53%.
+CAND_0092706,56,0.706,AI Research Engineer with 5.8 yrs experience; 1 of 26 required skills matched; response rate 78%.
+CAND_0043228,57,0.7056,Applied ML Engineer with 6.8 yrs experience; 5 of 26 required skills matched; response rate 41%.
+CAND_0004131,58,0.7044,Junior ML Engineer with 6.8 yrs experience; 5 of 26 required skills matched; response rate 47%.
+CAND_0044890,59,0.704,AI Research Engineer with 5.0 yrs experience; 4 of 26 required skills matched; response rate 79%.
+CAND_0077003,60,0.6999,Data Scientist with 6.8 yrs experience; 4 of 26 required skills matched; response rate 49%.
+CAND_0004402,61,0.6998,AI Research Engineer with 6.0 yrs experience; 4 of 26 required skills matched; response rate 83%.
+CAND_0047721,62,0.6988,Senior Data Scientist with 7.0 yrs experience; 7 of 26 required skills matched; response rate 49%.
+CAND_0011687,63,0.6986,Senior NLP Engineer with 7.8 yrs experience; 6 of 26 required skills matched; response rate 89%.
+CAND_0070525,64,0.6975,Senior Software Engineer (ML) with 5.4 yrs experience; 4 of 26 required skills matched; response rate 93%.
+CAND_0007460,65,0.6966,AI Engineer with 4.7 yrs experience; 6 of 26 required skills matched; response rate 48%.
+CAND_0098288,66,0.696,Junior ML Engineer with 6.7 yrs experience; 4 of 26 required skills matched; response rate 48%.
+CAND_0040178,67,0.6958,ML Engineer with 5.0 yrs experience; 3 of 26 required skills matched; response rate 55%.
+CAND_0062247,68,0.6953,AI Engineer with 7.3 yrs experience; 5 of 26 required skills matched; response rate 78%.
+CAND_0078002,69,0.6898,Machine Learning Engineer with 6.3 yrs experience; 4 of 26 required skills matched; response rate 86%.
+CAND_0000273,70,0.689,ML Engineer with 5.8 yrs experience; 1 of 26 required skills matched; response rate 47%.
+CAND_0001610,71,0.6884,Machine Learning Engineer with 3.0 yrs experience; 8 of 26 required skills matched; response rate 57%.
+CAND_0046621,72,0.6849,AI Research Engineer with 6.6 yrs experience; 4 of 26 required skills matched; response rate 33%.
+CAND_0053527,73,0.6833,Junior ML Engineer with 7.0 yrs experience; 2 of 26 required skills matched; response rate 81%.
+CAND_0082489,74,0.6829,ML Engineer with 5.3 yrs experience; 3 of 26 required skills matched; response rate 71%.
+CAND_0034177,75,0.6811,Senior Software Engineer (ML) with 3.6 yrs experience; 3 of 26 required skills matched; response rate 82%.
+CAND_0040677,76,0.681,AI Research Engineer with 4.2 yrs experience; 5 of 26 required skills matched; response rate 37%.
+CAND_0020877,77,0.6792,Applied ML Engineer with 5.1 yrs experience; 8 of 26 required skills matched; response rate 66%.
+CAND_0081321,78,0.6786,Senior Software Engineer (ML) with 5.3 yrs experience; 5 of 26 required skills matched; response rate 47%.
+CAND_0011432,79,0.6785,Senior Data Scientist with 7.6 yrs experience; 3 of 26 required skills matched; response rate 67%.
+CAND_0009691,80,0.6749,Applied ML Engineer with 6.2 yrs experience; 5 of 26 required skills matched; response rate 64%.
+CAND_0099401,81,0.6749,NLP Engineer with 7.7 yrs experience; 5 of 26 required skills matched; response rate 42%.
+CAND_0008239,82,0.6727,AI Engineer with 4.0 yrs experience; 7 of 26 required skills matched; response rate 73%.
+CAND_0018613,83,0.6724,Senior Software Engineer (ML) with 4.8 yrs experience; 2 of 26 required skills matched; response rate 39%.
+CAND_0019480,84,0.6692,NLP Engineer with 2.8 yrs experience; 4 of 26 required skills matched; response rate 87%.
+CAND_0072768,85,0.6685,Senior Software Engineer (ML) with 3.9 yrs experience; 5 of 26 required skills matched; response rate 78%.
+CAND_0095528,86,0.6681,Senior Data Scientist with 5.3 yrs experience; 6 of 26 required skills matched; response rate 55%.
+CAND_0070398,87,0.6678,Machine Learning Engineer with 7.2 yrs experience; 7 of 26 required skills matched; response rate 60%.
+CAND_0018701,88,0.6668,Junior ML Engineer with 6.0 yrs experience; 2 of 26 required skills matched; response rate 71%.
+CAND_0043676,89,0.6647,Senior Software Engineer (ML) with 6.1 yrs experience; 1 of 26 required skills matched; response rate 65%.
+CAND_0073504,90,0.6642,Junior ML Engineer with 6.6 yrs experience; 3 of 26 required skills matched; response rate 78%.
+CAND_0041669,91,0.6629,Recommendation Systems Engineer with 8.0 yrs experience; 6 of 26 required skills matched; response rate 77%.
+CAND_0010603,92,0.6621,ML Engineer with 5.3 yrs experience; 4 of 26 required skills matched; response rate 94%.
+CAND_0071672,93,0.6605,Senior Software Engineer with 7.6 yrs experience; 1 of 26 required skills matched; response rate 69%.
+CAND_0098846,94,0.6589,AI Engineer with 7.6 yrs experience; 4 of 26 required skills matched; response rate 62%.
+CAND_0002344,95,0.6581,Senior Software Engineer (ML) with 4.7 yrs experience; 6 of 26 required skills matched; response rate 83%.
+CAND_0060054,96,0.6562,AI Engineer with 6.4 yrs experience; 5 of 26 required skills matched; response rate 86%.
+CAND_0088025,97,0.6562,Staff Machine Learning Engineer with 8.6 yrs experience; 8 of 26 required skills matched; response rate 83%.
+CAND_0017771,98,0.6551,Senior Software Engineer with 7.8 yrs experience; 1 of 26 required skills matched; response rate 30%.
+CAND_0013625,99,0.6524,Senior Software Engineer with 6.2 yrs experience; 2 of 26 required skills matched; response rate 43%.
+CAND_0058575,100,0.6515,AI Engineer with 5.8 yrs experience; 5 of 26 required skills matched; response rate 69%.
