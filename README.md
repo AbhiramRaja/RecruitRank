@@ -2,7 +2,7 @@
 
 **Intelligent Candidate Ranking System | India Runs Data & AI Challenge**
 
-> *Yogyata (योग्यता) — merit. We rank on evidence, not keywords.*
+> *We rank on evidence, not keywords.*
 
 ## Overview
 
