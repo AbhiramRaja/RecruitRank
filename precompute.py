@@ -24,11 +24,16 @@ Usage:
 import argparse
 import json
 import os
+import random
 import sys
 import time
 
 import numpy as np
 import pandas as pd
+
+# Reproducibility (instructions.md §12.4)
+random.seed(42)
+np.random.seed(42)
 
 
 # ---------------------------------------------------------------------------
