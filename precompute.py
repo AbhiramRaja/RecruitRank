@@ -143,9 +143,20 @@ def run_stage1(candidates, jd_parsed):
 def run_stage2(gated_candidates, jd_parsed, artifacts_dir: str, force: bool):
     from pipeline.stage2_features import extract_features, save_features
 
+    parquet_path = os.path.join(artifacts_dir, "features.parquet")
     if not force and _artifact_exists(artifacts_dir, "features.parquet"):
-        print(f"[{_ts()}] Stage 2: features.parquet already exists — skipping.")
-        return pd.read_parquet(os.path.join(artifacts_dir, "features.parquet"))
+        df = pd.read_parquet(parquet_path)
+        # Validate the parquet has the required honeypot_flag column — older cached
+        # parquets may be missing it. If so, re-compute rather than silently using
+        # a stale artifact (which would crash Stage 4 with a KeyError).
+        if "honeypot_flag" in df.columns:
+            print(f"[{_ts()}] Stage 2: features.parquet already exists — skipping.")
+            return df
+        else:
+            print(
+                f"[{_ts()}] Stage 2: features.parquet exists but is stale "
+                "(missing 'honeypot_flag' column). Re-computing..."
+            )
 
     print(f"[{_ts()}] Stage 2: Feature Extraction — start ({len(gated_candidates):,} candidates)")
     t0 = time.time()
@@ -181,6 +192,19 @@ def run_stage3(valid_candidates, jd_parsed, artifacts_dir: str, force: bool):
 def run_stages_456(features_df, career_emb, skills_emb, jd_vec, cids, candidates_dict):
     from pipeline.stage4_scorer import compute_weighted_scores
     from pipeline.stage5_behavioral import apply_behavioral_modifier
+
+    # Guard: if features_df was loaded from a stale cached parquet that predates
+    # the honeypot_flag column, add it with all-False (safe default — all survivors
+    # of Stage 1 are either flagged honeypots or valid; honeypots are excluded from
+    # valid_candidates before Stage 2 runs, so any row here should be valid).
+    if "honeypot_flag" not in features_df.columns:
+        print(
+            f"[{_ts()}] Stage 4: WARNING — 'honeypot_flag' column missing from "
+            "features.parquet (stale cache). Defaulting all rows to False. "
+            "Run precompute.py --force to regenerate a clean features.parquet."
+        )
+        features_df = features_df.copy()
+        features_df["honeypot_flag"] = False
 
     # Stage 4: base scores (only valid/non-honeypot features)
     print(f"[{_ts()}] Stage 4: Weighted Score Combiner — start")
