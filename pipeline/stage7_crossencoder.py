@@ -383,7 +383,7 @@ if __name__ == "__main__":
         from pipeline.stage5_behavioral import apply_behavioral_modifier
         from pipeline.stage6_retrieval import retrieve_top_500
 
-        sample_path = os.path.join(project_root, "sample_candidates.json")
+        sample_path = os.path.join(project_root, "data", "sample_candidates.json")
         career_path = os.path.join(artifacts_dir, "career_embeddings.npy")
         skills_path = os.path.join(artifacts_dir, "skills_embeddings.npy")
         jd_vec_path = os.path.join(artifacts_dir, "jd_vector.npy")

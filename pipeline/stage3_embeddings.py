@@ -5,10 +5,14 @@ Runs: Offline pre-computation. Output saved to artifacts/.
 Model: sentence-transformers/all-MiniLM-L6-v2 (CPU, ~40MB, 384-dim)
 
 Two embedding tracks:
-  Track A: Career Description Embedding — concatenated career history
-           "{title} at {company}: {description}" per entry.
+  Track A: Career Description Embedding — each career_history entry is embedded
+           INDEPENDENTLY as "{title} at {company}: {description}" and the
+           resulting vectors are MEAN-POOLED into one candidate-level vector.
+           This prevents context truncation (Fix C): all-MiniLM-L6-v2 has a
+           256-token limit, and concatenating a full 10-year career easily
+           exceeds it, silently losing signal from later entries.
   Track B: Skills Embedding — weighted skill text where required skills
-           from the JD are repeated 3× to boost their semantic weight.
+           from the JD are repeated 3x to boost their semantic weight.
 
 Also pre-computes the JD vector from jd_parsed["jd_embedding_text"].
 
@@ -89,36 +93,75 @@ def compute_embeddings(
         s.lower() for s in jd_parsed.get("required_skills", [])
     }
 
-    # Build text inputs and store career texts for Stage 7
+    # Build text inputs and store career texts for Stage 7.
+    # Track A chunks: list-of-lists — each inner list = career entries for one candidate.
     candidate_ids: List[str] = []
-    career_texts: List[str] = []
+    career_chunks: List[List[str]] = []   # per-candidate list of per-entry texts
     skills_texts: List[str] = []
     career_texts_dict: Dict[str, str] = {}
 
     for candidate in candidates:
         cid = candidate["candidate_id"]
-        c_text = build_career_text(candidate)
         s_text = build_skills_text(candidate, required_skills_lower)
 
-        candidate_ids.append(cid)
-        career_texts.append(c_text)
-        skills_texts.append(s_text)
-        career_texts_dict[cid] = c_text   # keyed dict for Stage 7 lookup
+        # Build one text chunk per career entry (Fix C: prevents token truncation).
+        # build_career_text() still used for Stage 7 cross-encoder (full text needed).
+        career_history = candidate.get("career_history", [])
+        chunks: List[str] = []
+        for entry in career_history:
+            title = entry.get("title", "")
+            company = entry.get("company", "")
+            desc = entry.get("description", "")
+            chunk = f"{title} at {company}: {desc}".strip()
+            if chunk:
+                chunks.append(chunk)
+        # Fallback: if no career history, use a single empty-string placeholder
+        # so array indexing stays consistent.
+        if not chunks:
+            chunks = [""]
 
-    # --- Track A: Career Description Embeddings (batched) ---
-    # Per instructions.md Section 6.5: normalize all embeddings.
-    # Per instructions.md Section 11.3: use batch processing.
+        candidate_ids.append(cid)
+        career_chunks.append(chunks)
+        skills_texts.append(s_text)
+        career_texts_dict[cid] = build_career_text(candidate)  # full text for Stage 7
+
+    # --- Track A: Career Description Embeddings (chunked mean-pooling) ---
+    # Fix C: all-MiniLM-L6-v2 has a 256-token context window. Concatenating a
+    # full career history easily exceeds this, silently truncating later roles.
+    # Solution: embed each career entry individually, then mean-pool per candidate.
+    # This preserves full signal from every role regardless of career length.
     print(
         f"[{time.strftime('%H:%M:%S')}] Stage 3: Track A — "
-        f"Career description embeddings ({n} texts)..."
+        f"Career description embeddings (chunked mean-pooling, {n} candidates)..."
     )
-    career_embeddings = model.encode(
-        career_texts,
+    # Flatten all chunks into one big batch for efficiency
+    flat_chunks: List[str] = []
+    chunk_counts: List[int] = []          # how many chunks belong to each candidate
+    for chunks in career_chunks:
+        flat_chunks.extend(chunks)
+        chunk_counts.append(len(chunks))
+
+    flat_chunk_embs = model.encode(
+        flat_chunks,
         batch_size=EMBEDDING_BATCH_SIZE,
-        normalize_embeddings=True,
+        normalize_embeddings=False,       # normalize AFTER mean-pooling
         show_progress_bar=True,
     )
-    career_embeddings = np.asarray(career_embeddings, dtype=np.float32)
+    flat_chunk_embs = np.asarray(flat_chunk_embs, dtype=np.float32)  # (total_chunks, D)
+
+    # Mean-pool chunks back into one vector per candidate, then L2-normalize
+    career_emb_list: List[np.ndarray] = []
+    offset = 0
+    for count in chunk_counts:
+        chunk_block = flat_chunk_embs[offset : offset + count]  # (count, D)
+        mean_vec = chunk_block.mean(axis=0)                      # (D,)
+        norm = np.linalg.norm(mean_vec)
+        if norm > 0:
+            mean_vec = mean_vec / norm   # L2-normalise
+        career_emb_list.append(mean_vec)
+        offset += count
+
+    career_embeddings = np.stack(career_emb_list, axis=0).astype(np.float32)  # (N, D)
     assert career_embeddings.shape == (n, EMBEDDING_DIM), (
         f"career_embeddings shape mismatch: expected ({n}, {EMBEDDING_DIM}), "
         f"got {career_embeddings.shape}"
@@ -314,6 +357,9 @@ def compute_embedding_scores(
     Since all vectors are L2-normalized, cosine similarity = dot product.
     Per instructions.md Section 6.3: this formula is fixed.
 
+    Similarity is computed via faiss.IndexFlatIP when faiss-cpu is installed
+    (SIMD-accelerated, exact). Falls back to numpy @ otherwise. (Fix B)
+
     Args:
         career_embeddings: (N, 384) normalized career vectors
         skills_embeddings: (N, 384) normalized skill vectors
@@ -322,8 +368,9 @@ def compute_embedding_scores(
     Returns:
         np.ndarray of shape (N,) with combined embedding scores.
     """
-    career_sim = career_embeddings @ jd_vector   # (N,)
-    skills_sim = skills_embeddings @ jd_vector   # (N,)
+    from pipeline.stage4_scorer import _faiss_inner_product
+    career_sim = _faiss_inner_product(career_embeddings, jd_vector)  # (N,)
+    skills_sim = _faiss_inner_product(skills_embeddings, jd_vector)  # (N,)
     return 0.65 * career_sim + 0.35 * skills_sim
 
 
@@ -340,7 +387,7 @@ if __name__ == "__main__":
     )
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sample_path = os.path.join(project_root, "sample_candidates.json")
+    sample_path = os.path.join(project_root, "data", "sample_candidates.json")
     artifacts_dir = os.path.join(project_root, "artifacts")
 
     jd_parsed = parse_jd()

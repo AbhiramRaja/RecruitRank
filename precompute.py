@@ -50,12 +50,20 @@ def _load_candidates(data_dir: str):
       - candidates.jsonl  (JSONL — one JSON object per line)
       - candidates.json   (JSON array)
       - sample_candidates.json (fallback for local testing)
+
+    Search order (Issue #4 fix — architecture.md specifies data/ dir but
+    candidates.jsonl may sit at the project root; both are checked):
+      1. <data_dir>/candidates.jsonl   (spec-compliant location)
+      2. <data_dir>/candidates.json
+      3. <project_root>/candidates.jsonl  (current actual location)
+      4. data/sample_candidates.json           (fallback for testing)
     """
+    project_root = os.path.dirname(os.path.abspath(__file__))
     search_paths = [
         os.path.join(data_dir, "candidates.jsonl"),
         os.path.join(data_dir, "candidates.json"),
-        "sample_candidates.json",
-        os.path.join("data", "candidates.json"),
+        os.path.join(project_root, "candidates.jsonl"),  # root fallback
+        os.path.join(project_root, "data", "sample_candidates.json"),
     ]
 
     for path in search_paths:

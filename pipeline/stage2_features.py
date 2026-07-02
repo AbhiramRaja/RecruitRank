@@ -219,7 +219,7 @@ if __name__ == "__main__":
     print(f"[{time.strftime('%H:%M:%S')}] Stage 2: Feature Extraction — start")
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sample_path = os.path.join(project_root, "sample_candidates.json")
+    sample_path = os.path.join(project_root, "data", "sample_candidates.json")
     artifacts_dir = os.path.join(project_root, "artifacts")
 
     if not os.path.exists(sample_path):

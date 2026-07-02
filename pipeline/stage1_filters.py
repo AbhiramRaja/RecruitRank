@@ -36,6 +36,9 @@ def apply_hard_filters(candidates: List[Dict], jd_parsed: Dict) -> List[Dict]:
       4. Zero technical skills (no overlap with JD required + nice-to-have)
 
     Returns the surviving candidate list (discarded ones are gone for good).
+
+    Monitoring (Risk 4 fix): prints per-filter drop counts so operators can
+    detect over-aggressive filtering on production data.
     """
     # Build combined wrong-domain list: spec titles + any extra from JD
     all_wrong_domains: List[str] = list(WRONG_DOMAIN_TITLES)
@@ -52,6 +55,14 @@ def apply_hard_filters(candidates: List[Dict], jd_parsed: Dict) -> List[Dict]:
     }
 
     filtered: List[Dict] = []
+    # Per-filter drop counters for monitoring (Risk 4)
+    drops: Dict[str, int] = {
+        "country": 0,
+        "consulting_only": 0,
+        "wrong_domain_title": 0,
+        "zero_tech_skills": 0,
+    }
+    total_in = len(candidates)
 
     for candidate in candidates:
         profile = candidate.get("profile", {})
@@ -64,6 +75,7 @@ def apply_hard_filters(candidates: List[Dict], jd_parsed: Dict) -> List[Dict]:
         # Strictly per spec — no fallback to location string.
         # ------------------------------------------------------------------
         if profile.get("country", "") != "India":
+            drops["country"] += 1
             continue
 
         # ------------------------------------------------------------------
@@ -75,6 +87,7 @@ def apply_hard_filters(candidates: List[Dict], jd_parsed: Dict) -> List[Dict]:
             entry.get("industry", "") in CONSULTING_INDUSTRIES
             for entry in career_history
         ):
+            drops["consulting_only"] += 1
             continue
 
         # ------------------------------------------------------------------
@@ -84,6 +97,7 @@ def apply_hard_filters(candidates: List[Dict], jd_parsed: Dict) -> List[Dict]:
         # ------------------------------------------------------------------
         current_title_lower = profile.get("current_title", "").lower()
         if any(wrong in current_title_lower for wrong in all_wrong_domains):
+            drops["wrong_domain_title"] += 1
             continue
 
         # ------------------------------------------------------------------
@@ -94,9 +108,27 @@ def apply_hard_filters(candidates: List[Dict], jd_parsed: Dict) -> List[Dict]:
             s for s in skills if s.get("name", "").lower() in tech_skills_set
         ]
         if len(matched_tech) == 0:
+            drops["zero_tech_skills"] += 1
             continue
 
         filtered.append(candidate)
+
+    total_out = len(filtered)
+    total_dropped = total_in - total_out
+    # --- Monitoring: print per-filter breakdown (Risk 4 fix) ---
+    print(
+        f"[Stage 1 Pass A] {total_in:,} in -> {total_out:,} out "
+        f"({total_dropped:,} dropped, {total_out/max(total_in,1)*100:.1f}% pass rate)."
+    )
+    for fname, count in drops.items():
+        pct = count / max(total_in, 1) * 100
+        flag = " [HIGH]" if pct > 40 else ""
+        print(f"  Filter '{fname}': removed {count:,} ({pct:.1f}%){flag}")
+    if total_out < 100:
+        print(
+            f"  WARNING: Only {total_out} candidates survived hard filters. "
+            "Honeypot gate + Stage 6 may not produce 100 valid candidates."
+        )
 
     return filtered
 
@@ -216,7 +248,7 @@ if __name__ == "__main__":
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     jd_path = os.path.join(project_root, "artifacts", "jd_parsed.json")
-    sample_path = os.path.join(project_root, "sample_candidates.json")
+    sample_path = os.path.join(project_root, "data", "sample_candidates.json")
 
     if not os.path.exists(jd_path):
         print(f"ERROR: {jd_path} not found. Run Stage 0 first.")

@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     artifacts_dir = os.path.join(project_root, "artifacts")
-    sample_path = os.path.join(project_root, "sample_candidates.json")
+    sample_path = os.path.join(project_root, "data", "sample_candidates.json")
 
     features_path = os.path.join(artifacts_dir, "features.parquet")
     career_path = os.path.join(artifacts_dir, "career_embeddings.npy")

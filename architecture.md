@@ -17,7 +17,7 @@ RecruitRank is an 8-stage candidate ranking pipeline that processes 100,000 cand
 
 ## Dataset Schema Reference
 
-All field names used in this pipeline are derived from the official `candidate_schema.json`.
+All field names used in this pipeline are derived from the official `data/candidate_schema.json`.
 
 ### Top-level keys (required)
 ```

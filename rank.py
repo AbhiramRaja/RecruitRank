@@ -43,11 +43,19 @@ def _load_candidates(data_dir: str, project_root: str):
     """
     Load candidate records. Tries data_dir, then project_root for samples.
     Supports .jsonl (one JSON per line) and .json (array).
+
+    Search order (Issue #4 fix — architecture.md specifies data/ dir but
+    candidates.jsonl may sit at the project root; both are checked):
+      1. <data_dir>/candidates.jsonl   (spec-compliant location)
+      2. <data_dir>/candidates.json
+      3. <project_root>/candidates.jsonl  (current actual location at root)
+      4. <project_root>/data/sample_candidates.json  (fallback for testing)
     """
     search_paths = [
         os.path.join(data_dir, "candidates.jsonl"),
         os.path.join(data_dir, "candidates.json"),
-        os.path.join(project_root, "sample_candidates.json"),
+        os.path.join(project_root, "candidates.jsonl"),  # root fallback
+        os.path.join(project_root, "data", "sample_candidates.json"),
     ]
     for path in search_paths:
         if not os.path.exists(path):
@@ -323,9 +331,14 @@ def main():
     # Run official validator
     # -----------------------------------------------------------------------
     validator_path = os.path.join(project_root, "validate_submission.py")
+    if not os.path.exists(validator_path):
+        validator_path = os.path.join(project_root, "submissions", "validate_submission.py")
+
     if os.path.exists(validator_path):
         print(f"[{_ts()}] Running validate_submission.py...")
+        sys.path.insert(0, os.path.dirname(validator_path))
         from validate_submission import validate_submission
+        sys.path.pop(0)
         errors = validate_submission(output_path)
         if errors:
             print(f"\nValidation FAILED ({len(errors)} error(s)):")

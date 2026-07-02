@@ -2,7 +2,7 @@
 Stage 0 — JD Parsing
 
 Runs: Offline, once, before any candidate processing.
-Input: Job Description text (from job_description.docx)
+Input: Job Description text (from data/job_description.docx)
 Output:
   artifacts/jd_parsed.json   — structured JD signals (required skills, etc.)
   artifacts/jd_vector.npy    — L2-normalised SBERT embedding of jd_embedding_text

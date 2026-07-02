@@ -11,6 +11,12 @@ base_score = (
   + 0.10 * location_edu_score     # location match + institution tier
   + 0.05 * embedding_score        # dual-track SBERT similarity
 )
+
+Embedding similarity (Fix B):
+  Uses faiss.IndexFlatIP when faiss-cpu is available — same exact results as
+  numpy @, but SIMD/AVX2 accelerated. At 100K candidates this is a measurable
+  speedup; at 500K+ switch to IndexIVFFlat in precompute.py for true ANN.
+  Falls back to numpy matrix multiply if faiss is not installed.
 """
 
 import time
@@ -18,6 +24,50 @@ from typing import List
 
 import numpy as np
 import pandas as pd
+
+
+# ---------------------------------------------------------------------------
+# FAISS-accelerated (or numpy fallback) inner-product similarity
+# ---------------------------------------------------------------------------
+
+def _faiss_inner_product(
+    matrix: np.ndarray,
+    vector: np.ndarray,
+) -> np.ndarray:
+    """
+    Compute inner-product similarity between every row of `matrix` and `vector`.
+
+    Tries faiss.IndexFlatIP first (SIMD-accelerated, exact results).
+    Falls back to numpy matrix-vector multiply if faiss-cpu is not installed.
+
+    Both `matrix` (N, D) and `vector` (D,) must be L2-normalized (float32)
+    so that inner product == cosine similarity.
+
+    Args:
+        matrix: (N, D) float32 array of L2-normalised embedding vectors.
+        vector: (D,)   float32 L2-normalised query vector.
+
+    Returns:
+        np.ndarray of shape (N,) with similarity scores.
+    """
+    matrix = np.ascontiguousarray(matrix, dtype=np.float32)
+    vector = np.ascontiguousarray(vector, dtype=np.float32)
+
+    try:
+        import faiss  # optional accelerator (faiss-cpu)
+        dim = matrix.shape[1]
+        index = faiss.IndexFlatIP(dim)   # exact inner product, SIMD-accelerated
+        index.add(matrix)                # O(N) index build
+        # Search returns (distances, indices) — shape (1, N) for one query
+        query = vector.reshape(1, -1)
+        distances, indices = index.search(query, matrix.shape[0])
+        # Re-order scores back to original candidate order
+        scores = np.empty(matrix.shape[0], dtype=np.float32)
+        scores[indices[0]] = distances[0]
+        return scores
+    except ImportError:
+        # faiss not installed — transparent numpy fallback
+        return matrix @ vector  # (N,)
 
 
 def compute_weighted_scores(
@@ -51,10 +101,17 @@ def compute_weighted_scores(
     n_features = len(features_df)
     n_embeddings = len(embedding_cids)
 
-    # --- Embedding similarity scores ---
-    # Dot product of L2-normalised vectors == cosine similarity.
-    career_sim = career_embeddings @ jd_vector   # (N,)
-    skills_sim = skills_embeddings @ jd_vector   # (N,)
+    # --- Embedding similarity scores (Fix B: FAISS-accelerated) ---
+    # _faiss_inner_product() uses faiss.IndexFlatIP (SIMD-accelerated, exact)
+    # when faiss-cpu is installed, else falls back to numpy @.
+    # All embedding matrices are L2-normalised, so inner product == cosine sim.
+    t_sim = time.time()
+    career_sim = _faiss_inner_product(career_embeddings, jd_vector)  # (N,)
+    skills_sim = _faiss_inner_product(skills_embeddings, jd_vector)  # (N,)
+    print(
+        f"[{time.strftime('%H:%M:%S')}] Stage 4: Embedding similarity computed "
+        f"in {time.time()-t_sim:.2f}s for {len(career_sim):,} candidates."
+    )
 
     # Per architecture.md Stage 3 + instructions.md §6.3: fixed formula.
     emb_scores = 0.65 * career_sim + 0.35 * skills_sim

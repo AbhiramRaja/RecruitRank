@@ -22,6 +22,7 @@ Output:
   artifacts/reasoning.json — {candidate_id: reasoning_string}
 """
 
+import difflib
 import json
 import os
 import re
@@ -274,10 +275,23 @@ def verify_reasoning(
         + jd_parsed.get("nice_to_have_skills", [])
     )
 
-    # For each JD skill that appears in the reasoning, verify it's in profile
+    # For each JD skill that appears in the reasoning, verify it's in profile.
+    # Uses fuzzy matching (SequenceMatcher ratio ≥ 0.80) to handle variants like
+    # "ReactJS" vs "React.js" or "TensorFlow" vs "Tensorflow" that exact
+    # substring matching would incorrectly flag as hallucinations (Risk 1 fix).
+    profile_skill_names_lower = [s.lower() for s in candidate_skills]
     for skill in all_jd_skills:
-        if skill.lower() in reasoning_lower:
-            if skill.lower() not in profile_text:
+        skill_lower = skill.lower()
+        if skill_lower in reasoning_lower:
+            # First try exact substring match against full profile text
+            if skill_lower in profile_text:
+                continue
+            # Fuzzy fallback: check against each profile skill name individually
+            fuzzy_match = any(
+                difflib.SequenceMatcher(None, skill_lower, ps).ratio() >= 0.80
+                for ps in profile_skill_names_lower
+            )
+            if not fuzzy_match:
                 hallucinations.append(f"[skill] {skill}")
 
     # --- Check 2: Companies must exist in career history ---
@@ -742,7 +756,7 @@ if __name__ == "__main__":
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     artifacts_dir = os.path.join(project_root, "artifacts")
-    sample_path = os.path.join(project_root, "sample_candidates.json")
+    sample_path = os.path.join(project_root, "data", "sample_candidates.json")
 
     required = [sample_path]
     missing_files = [p for p in required if not os.path.exists(p)]

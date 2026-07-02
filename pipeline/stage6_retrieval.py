@@ -88,8 +88,10 @@ def retrieve_top_500(
     t0 = time.time()
 
     valid_candidates = scored_df[scored_df["honeypot_flag"] == False]
-    ranked = valid_candidates.sort_values("final_base_score", ascending=False)
-    top_n = ranked.head(n).reset_index(drop=True)
+    # nlargest() is O(n log k) vs sort_values().head() O(n log n) — more
+    # efficient when n (retrieved) << total candidates. Safe at any scale.
+    # (Risk 3 fix: Stage 6 pandas sort bottleneck for 500K+ datasets)
+    top_n = valid_candidates.nlargest(n, "final_base_score").reset_index(drop=True)
 
     elapsed = time.time() - t0
 
@@ -136,7 +138,7 @@ if __name__ == "__main__":
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     artifacts_dir = os.path.join(project_root, "artifacts")
-    sample_path = os.path.join(project_root, "sample_candidates.json")
+    sample_path = os.path.join(project_root, "data", "sample_candidates.json")
 
     career_path = os.path.join(artifacts_dir, "career_embeddings.npy")
     skills_path = os.path.join(artifacts_dir, "skills_embeddings.npy")

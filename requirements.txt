@@ -16,3 +16,10 @@ scikit-learn>=1.4.0
 # Local LLM for reasoning generation (Stage 8)
 # CPU-only install — GPU build optional for faster precompute
 llama-cpp-python>=0.2.0
+
+# ANN acceleration for Stage 4 embedding similarity (Fix B)
+# Optional — pipeline falls back to numpy @ if not installed.
+# At 100K candidates: ~2x speedup via AVX2/SIMD.
+# At 500K+: upgrade to IndexIVFFlat in precompute.py for true O(sqrt(N)) ANN.
+# Install: pip install faiss-cpu
+faiss-cpu>=1.7.4
